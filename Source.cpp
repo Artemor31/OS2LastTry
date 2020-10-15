@@ -4,6 +4,8 @@
 #include <tchar.h>
 
 #include "resource.h"
+#include <string>
+#include <sstream>
 //#include "afxres.h"
 
 #define IDC_TREE             2001
@@ -28,6 +30,11 @@ POINT ptDrag;
 HBRUSH brushes[3];
 int brush_index = 0;
 
+LPCWSTR scoreText;
+int score = 0;
+
+HWND edit1 = NULL;
+
 LRESULT CALLBACK MyWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 BOOL PreTranslateMessage(LPMSG lpMsg);
 BOOL OnCreate(HWND hwnd, LPCREATESTRUCT lpCreateStruct);
@@ -48,6 +55,8 @@ void Dialog_OnClose(HWND hwnd);
 void Dialog_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify);
 HTREEITEM TreeView_FindItem(HWND hwnd, HTREEITEM hParent, LPCTSTR lpText, BOOL fIgnoreCase);
 void TreeView_DeleteAllCheckedItems(HWND hwnd, HTREEITEM hParent);
+std::string convertInt(int number);
+std::wstring s2ws(const std::string& s);
 
 int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR lpszCmdLine, int nCmdShow)
 {
@@ -100,7 +109,6 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR lpszCmdLine, int nCm
             }
         }
     }
-
     return static_cast<int>(Massage.wParam);
 }
 LRESULT CALLBACK MyWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -148,9 +156,15 @@ LRESULT CALLBACK MyWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 
     case WM_TIMER:
     {
-        if (brush_index == 2) brush_index = 0;
+        score++;
+        std::wstring tmp = s2ws(convertInt(score));
+        scoreText = tmp.c_str();        
+        Edit_SetText(edit1, scoreText);
+
+
+       /* if (brush_index == 2) brush_index = 0;
         else brush_index++;
-        InvalidateRect(hWnd, NULL, FALSE);
+        InvalidateRect(hWnd, NULL, FALSE);*/
     }
     return 0;
     }
@@ -177,7 +191,6 @@ BOOL PreTranslateMessage(LPMSG lpMsg)
 }
 BOOL OnCreate(HWND hwnd, LPCREATESTRUCT lpCreateStruct)
 {
-    SetTimer(hwnd, 1, 10000, NULL);
     // создаём дерево просмотра 
     CreateWindowEx(0, TEXT("SysTreeView32"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | TVS_LINESATROOT | TVS_HASLINES | TVS_HASBUTTONS | TVS_SHOWSELALWAYS | TVS_CHECKBOXES,
         10, 30, 250, 410, hwnd, (HMENU)IDC_TREE, lpCreateStruct->hInstance, NULL);
@@ -213,6 +226,11 @@ BOOL OnCreate(HWND hwnd, LPCREATESTRUCT lpCreateStruct)
     CreateWindowEx(0, TEXT("Button"), TEXT("Скрыть кнопки"),
         WS_CHILD | WS_VISIBLE | BS_AUTORADIOBUTTON,
         370, 230, 200, 20, hwnd, (HMENU)ID_NO, lpCreateStruct->hInstance, NULL);
+
+    // EditBox
+    edit1 = CreateWindowEx(0, TEXT("Edit"), TEXT("0.0"),
+        WS_CHILD | WS_TABSTOP | WS_VISIBLE | WS_BORDER,
+        580, 10, 150, 20, hwnd, NULL, lpCreateStruct->hInstance, NULL);
 
     return TRUE;
 }
@@ -442,11 +460,14 @@ void OnLButtonDown(HWND hwnd, BOOL fDoubleClick, int x, int y, UINT keyFlags)
         SetCapture(hwnd);
         ptDrag.x = x;
         ptDrag.y = y;
+        score = 0;
+        SetTimer(hwnd, 1, 100, NULL);
     }
 }
 void OnLButtonUp(HWND hwnd, int x, int y, UINT keyFlags)
 {
     ReleaseCapture();
+    KillTimer(hwnd, 1);
 }
 void OnMouseMove(HWND hwnd, int x, int y, UINT keyFlags)
 {
@@ -519,18 +540,10 @@ INT_PTR CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 }
 BOOL Dialog_OnInitDialog(HWND hwnd, HWND hwndFocus, LPARAM lParam)
 {
-    // получим дескриптор окна редактируемого поля
     HWND hwndEdit = GetDlgItem(hwnd, IDC_EDIT1);
-
-    // задаем максимальную длину текста в редактируемом поле
     Edit_LimitText(hwndEdit, _countof(szBuffer) - 1);
-
-    // задаем серый (фоновый) текст в редактируемом поле
     Edit_SetCueBannerText(hwndEdit, L"Название новой записи");
-
-    // установим флажок
     CheckDlgButton(hwnd, IDC_CHECK_ROOT, BST_CHECKED);
-
     return TRUE;
 } 
 void Dialog_OnClose(HWND hwnd)
@@ -547,11 +560,9 @@ void Dialog_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
     case IDOK: 
     {
         fInsertAddItemToRoot = (IsDlgButtonChecked(hwnd, IDC_CHECK_ROOT) == BST_CHECKED) ? TRUE : FALSE;
-
-        // получим содержимое редактируемого поля
         int cch = GetDlgItemText(hwnd, IDC_EDIT1, szBuffer, _countof(szBuffer));
 
-        if (0 == cch) // в редактируемого поле нет текста
+        if (0 == cch) 
         {
             HWND hwndEdit = GetDlgItem(hwnd, IDC_EDIT1);
 
@@ -565,9 +576,7 @@ void Dialog_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
         }
         else if (hwnd == hDlg)
         {
-            // очистим редактируемое поле
             SetDlgItemText(hwnd, IDC_EDIT1, NULL);
-            // отправляем окну-владельцу сообщение о том, что нужно добавить запись
             SendMessage(GetParent(hwnd), WM_ADDITEM, 0, 0);
         } 
         else
@@ -641,4 +650,27 @@ void TreeView_DeleteAllCheckedItems(HWND hwnd, HTREEITEM hParent)
         }
         hitem = hti;
     }
+}
+
+std:: string convertInt(int number)
+{
+    std::stringstream ss;
+    ss << number;
+    return ss.str();
+}
+
+std::wstring StrToWstr(const std::string& text) {
+    return std::wstring(text.begin(), text.end());
+}
+
+std::wstring s2ws(const std::string& s)
+{
+    int len;
+    int slength = (int)s.length() + 1;
+    len = MultiByteToWideChar(CP_ACP, 0, s.c_str(), slength, 0, 0);
+    wchar_t* buf = new wchar_t[len];
+    MultiByteToWideChar(CP_ACP, 0, s.c_str(), slength, buf, len);
+    std::wstring r(buf);
+    delete[] buf;
+    return r;
 }
