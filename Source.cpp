@@ -35,6 +35,8 @@ int score = 0;
 
 HWND edit1 = NULL;
 
+int CUrrentColorOfTree = 0;
+
 LRESULT CALLBACK MyWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 BOOL PreTranslateMessage(LPMSG lpMsg);
 BOOL OnCreate(HWND hwnd, LPCREATESTRUCT lpCreateStruct);
@@ -496,17 +498,24 @@ void OnSysKey(HWND hwnd, UINT vk, BOOL fDown, int cRepeat, UINT flags)
         0x0000E4FF
 
     };
-    int i = 2;
     switch (vk)
     {
     case VK_LEFT:
         SetWindowPos(hwnd, NULL, rect.left - 5, rect.top, 0, 0, SWP_NOSIZE);
-        TreeView_SetBkColor(hwndCtl, ColPref[i]);
+        if (CUrrentColorOfTree > 0)
+            CUrrentColorOfTree--;
+        else
+            CUrrentColorOfTree = 4;
+        TreeView_SetBkColor(hwndCtl, ColPref[CUrrentColorOfTree]);
         break;
 
     case VK_RIGHT:
         SetWindowPos(hwnd, NULL, rect.left + 5, rect.top, 0, 0, SWP_NOSIZE);
-        TreeView_SetBkColor(hwndCtl, ColPref[i]);
+        if (CUrrentColorOfTree < 5)
+            CUrrentColorOfTree++;
+        else
+            CUrrentColorOfTree = 0;
+        TreeView_SetBkColor(hwndCtl, ColPref[CUrrentColorOfTree]);
         break;
 
     case VK_UP:
