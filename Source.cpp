@@ -35,7 +35,17 @@ int score = 0;
 
 HWND edit1 = NULL;
 
-int CUrrentColorOfTree = 0;
+int CUrrentColorOfTree = 0;   
+COLORREF ColPref[5]
+{
+	0x0000FF00,
+	0x000000FF,
+	0x00FF0000,
+	0x00FFFFFF,
+	0x0000E4FF
+};
+LPCTSTR KeyVal;
+HTREEITEM Syshitem;
 
 LRESULT CALLBACK MyWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 BOOL PreTranslateMessage(LPMSG lpMsg);
@@ -64,7 +74,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR lpszCmdLine, int nCm
 {
     brushes[0] = (HBRUSH)GetStockObject(LTGRAY_BRUSH);
     brushes[1] = (HBRUSH)GetStockObject(GRAY_BRUSH);
-    brushes[1] = (HBRUSH)GetStockObject(DKGRAY_BRUSH);
+    brushes[2] = (HBRUSH)GetStockObject(DKGRAY_BRUSH);
     MSG  Massage;
     BOOL IsError;
 
@@ -116,9 +126,6 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR lpszCmdLine, int nCm
 LRESULT CALLBACK MyWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     HWND hwndCtl = GetDlgItem(hWnd, IDC_TREE);
-    LPCTSTR KeyVal = (LPCTSTR)(char)wParam;
-    HTREEITEM hitem = TreeView_FindItem(hwndCtl, NULL, KeyVal, true);
-
     hMenu = GetMenu(hWnd);
     switch (uMsg)
     {
@@ -126,7 +133,6 @@ LRESULT CALLBACK MyWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
         HANDLE_MSG(hWnd, WM_SIZE, OnSize);
         HANDLE_MSG(hWnd, WM_COMMAND, OnCommand);
         HANDLE_MSG(hWnd, WM_LBUTTONDBLCLK, OnLButtonDown);
-        HANDLE_MSG(hWnd, WM_LBUTTONDOWN, OnLButtonDown);
         HANDLE_MSG(hWnd, WM_LBUTTONUP, OnLButtonUp);
         HANDLE_MSG(hWnd, WM_MOUSEMOVE, OnMouseMove);
         HANDLE_MSG(hWnd, WM_SYSKEYDOWN, OnSysKey);
@@ -134,10 +140,12 @@ LRESULT CALLBACK MyWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 
     case WM_SYSCHAR:
 
-        if (hitem != FALSE)
+		KeyVal = (LPCTSTR)(char)wParam;
+		Syshitem = TreeView_FindItem(hwndCtl, NULL, KeyVal, true);
+
+        if (Syshitem != FALSE)
         {
-            TreeView_SetItemState(hwndCtl, TreeView_GetNextSelected(hwndCtl, NULL), 0, TVIS_SELECTED);
-            TreeView_SetItemState(hwndCtl, hitem, TVIS_SELECTED, TVIS_SELECTED);
+            TreeView_SetItemState(hwndCtl, Syshitem, 0, TVIS_SELECTED);
         }
         return 0;
     case WM_DESTROY:
@@ -266,17 +274,19 @@ void OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
         break;
 
     case ID_YES:
-        hwndCtl = GetDlgItem(hwnd, ID_NEW_RECORD);
-        ShowWindow(hwndCtl, SW_SHOW);
-        hwndCtl = GetDlgItem(hwnd, ID_NEW_RECORD2);
-        ShowWindow(hwndCtl, SW_SHOW);
-        hwndCtl = GetDlgItem(hwnd, ID_DEL_RECORD);
-        ShowWindow(hwndCtl, SW_SHOW);
-        hwndCtl = GetDlgItem(hwnd, ID_FIND_RECORD);
-        ShowWindow(hwndCtl, SW_SHOW);
-        CheckMenuItem(hMenu, ID_YES, MF_BYCOMMAND | MF_CHECKED);
-        CheckMenuItem(hMenu, ID_NO, MF_BYCOMMAND | MF_UNCHECKED);
-        DrawMenuBar(hwnd);
+	{
+		hwndCtl = GetDlgItem(hwnd, ID_NEW_RECORD);
+		ShowWindow(hwndCtl, SW_SHOW);
+		hwndCtl = GetDlgItem(hwnd, ID_NEW_RECORD2);
+		ShowWindow(hwndCtl, SW_SHOW);
+		hwndCtl = GetDlgItem(hwnd, ID_DEL_RECORD);
+		ShowWindow(hwndCtl, SW_SHOW);
+		hwndCtl = GetDlgItem(hwnd, ID_FIND_RECORD);
+		ShowWindow(hwndCtl, SW_SHOW);
+		CheckMenuItem(hMenu, ID_YES, MF_BYCOMMAND | MF_CHECKED);
+		CheckMenuItem(hMenu, ID_NO, MF_BYCOMMAND | MF_UNCHECKED);
+		DrawMenuBar(hwnd);
+	}
         break;
 
     case ID_NEW_RECORD:
@@ -291,12 +301,14 @@ void OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
     break;
 
     case ID_NEW_RECORD2:
-        if (IsWindow(hDlg) == FALSE)
-        {
-            hDlg = CreateDialog(hInstance, MAKEINTRESOURCE(IDD_DIALOG1), hwnd, DialogProc);
-            ShowWindow(hDlg, SW_SHOW);
-        }
-        break;
+	{
+		if (IsWindow(hDlg) == FALSE)
+		{
+			hDlg = CreateDialog(hInstance, MAKEINTRESOURCE(IDD_DIALOG1), hwnd, DialogProc);
+			ShowWindow(hDlg, SW_SHOW);
+		}
+	}
+	break;
 
     case ID_DEL_RECORD:
     {
@@ -311,24 +323,26 @@ void OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
     break;
 
     case ID_FIND_RECORD:
-        if (0 == uFindMsgString)
-        {
-            //код сообщения FINDMSGSTRING
-            uFindMsgString = RegisterWindowMessage(FINDMSGSTRING);
-        }
+	{
+		if (0 == uFindMsgString)
+		{
+			//код сообщения FINDMSGSTRING
+			uFindMsgString = RegisterWindowMessage(FINDMSGSTRING);
+		}
 
-        if (IsWindow(hFindDlg) == FALSE)
-        {
-            findDlg.lStructSize = sizeof(FINDREPLACE);
-            findDlg.Flags = FR_HIDEUPDOWN | FR_HIDEWHOLEWORD;
-            findDlg.hInstance = hInstance;
-            findDlg.hwndOwner = hwnd;
-            findDlg.lpstrFindWhat = szBuffer;
-            findDlg.wFindWhatLen = _countof(szBuffer);
+		if (IsWindow(hFindDlg) == FALSE)
+		{
+			findDlg.lStructSize = sizeof(FINDREPLACE);
+			findDlg.Flags = FR_HIDEUPDOWN | FR_HIDEWHOLEWORD;
+			findDlg.hInstance = hInstance;
+			findDlg.hwndOwner = hwnd;
+			findDlg.lpstrFindWhat = szBuffer;
+			findDlg.wFindWhatLen = _countof(szBuffer);
 
-            hFindDlg = FindText(&findDlg);
-        }
-        break;
+			hFindDlg = FindText(&findDlg);
+		}
+	}
+	break;
 
     case ID_FORMAT_COLOR:
     {
@@ -489,15 +503,7 @@ void OnSysKey(HWND hwnd, UINT vk, BOOL fDown, int cRepeat, UINT flags)
     GetWindowRect(hwnd, &rect);
 
     HWND hwndCtl = GetDlgItem(hwnd, IDC_TREE);
-    COLORREF ColPref[5]
-    {
-        0x0000FF00,
-        0x000000FF,
-        0x00FF0000,
-        0x00FFFFFF,
-        0x0000E4FF
 
-    };
     switch (vk)
     {
     case VK_LEFT:
@@ -526,7 +532,6 @@ void OnSysKey(HWND hwnd, UINT vk, BOOL fDown, int cRepeat, UINT flags)
         SetWindowPos(hwnd, NULL, rect.left, rect.top + 5, 0, 0, SWP_NOSIZE);
         break;
     }
-    delete[] ColPref;
 }
 INT_PTR CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
